@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doge Tracker – Giá, dự đoán và thị trường crypto</title>
+<meta name="description" content="Theo dõi giá Dogecoin theo thời gian thực, dự báo thống kê và toàn cảnh thị trường crypto.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#0E1B3D; --bg2:#1B2F63; --ink:#EEF3FF; --muted:#9FB0D6; --line:rgba(255,255,255,.12);
+  --glass:rgba(255,255,255,.07); --gold:#F5C84B; --gold-deep:#B07F12; --fc:#7FD6FF;
+  --up:#4EE0A0; --down:#FF7A7A; --sky:rgba(255,255,255,.08);
+  box-sizing:border-box; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg1)}
+body{margin:0;min-height:100vh;font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.5;
+  background:
+    radial-gradient(1px 1px at 12% 18%,#fff8 50%,transparent 51%),radial-gradient(1px 1px at 82% 9%,#fff7 50%,transparent 51%),
+    radial-gradient(1.5px 1.5px at 66% 34%,#fff6 50%,transparent 51%),radial-gradient(1px 1px at 30% 60%,#fff5 50%,transparent 51%),
+    radial-gradient(900px 520px at 85% -5%,rgba(245,200,75,.22),transparent 60%),
+    radial-gradient(800px 600px at -10% 30%,rgba(127,214,255,.13),transparent 60%),
+    linear-gradient(180deg,var(--bg2) 0,var(--bg1) 620px);
+  background-attachment:fixed}
+button{font:inherit;color:inherit;cursor:pointer}
+img{display:block}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1160px;margin:0 auto;padding:18px 18px 56px}
+h2{margin:0 0 12px;font-size:1.05rem}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.stamp{font-size:.8rem;color:var(--muted)}
+.coins{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 6px}
+.coin{flex:0 0 auto;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:6px 14px;display:flex;gap:8px;align-items:baseline;backdrop-filter:blur(8px);transition:transform .15s}
+.coin:hover{transform:translateY(-2px)}
+.coin b{font-weight:800}.coin small{font-size:.8rem}
+.coin[aria-pressed=true]{background:linear-gradient(135deg,#FFE08A,var(--gold));border-color:transparent;color:#2A1D00;box-shadow:0 8px 22px rgba(245,200,75,.35)}
+.coin[aria-pressed=true] small{color:#2A1D00!important}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:6px;margin:14px 0 18px}
+@media(min-width:860px){.hero{grid-template-columns:minmax(0,1fr) 380px}}
+.hero h1{margin:0;font-size:1rem;font-weight:600;color:var(--muted)}
+.price{font-size:clamp(3rem,10vw,6.4rem);font-weight:800;line-height:1.02;letter-spacing:-.035em;margin:2px 0 10px;
+  background:linear-gradient(180deg,#FFF3C4,var(--gold) 60%,#C9921C);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 6px 18px rgba(245,200,75,.35))}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:3px 10px;font-weight:600;font-size:.9rem}
+.chip span{color:var(--muted);font-weight:400;margin-right:6px}
+.up{color:var(--up)}.down{color:var(--down)}
+.ctrl{margin-top:14px}
+.seg{display:inline-flex;background:rgba(0,0,0,.25);border-radius:10px;padding:3px;border:1px solid var(--line)}
+.seg button{border:0;background:transparent;border-radius:8px;padding:4px 12px;font-weight:600;font-size:.88rem;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--gold);color:#2A1D00;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+#stage{height:340px;position:relative}
+#stage canvas{width:100%!important;height:100%!important;display:block}
+#stage::after{content:"";position:absolute;left:18%;right:18%;bottom:6px;height:22px;background:radial-gradient(closest-side,rgba(0,0,0,.45),transparent);filter:blur(4px);z-index:-1}
+
+/* kính + 3D */
+.panel,.tile{background:var(--glass);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 18px 40px rgba(2,8,28,.45),0 2px 6px rgba(2,8,28,.4)}
+.panel{padding:18px}
+.tilt{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .18s ease-out;will-change:transform}
+
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
+@media(min-width:760px){.tiles{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.tile{padding:14px 16px}
+.tile small{display:block;color:var(--muted);font-size:.78rem}
+.tile b{font-size:1.3rem;font-weight:800;display:block;line-height:1.3}
+.tile em{font-style:normal;font-size:.82rem;font-weight:600}
+.tile svg.g{width:100%;max-width:120px;margin:-2px auto -6px;display:block}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:18px}
+@media(min-width:960px){.grid{grid-template-columns:minmax(0,1fr) 330px}}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.bar h2{margin:0}
+#chartBox{position:relative;height:380px}
+#chart{width:100%;height:100%;display:block}
+#tip{position:absolute;pointer-events:none;background:#fff;color:#14233A;border-radius:8px;padding:6px 10px;font-size:.82rem;white-space:nowrap;display:none;z-index:2;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.legend{display:flex;gap:16px;font-size:.8rem;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;border-top:3px solid var(--gold);vertical-align:middle;margin-right:6px}
+.legend i.f{border-top:3px dashed var(--fc)}
+.side{display:flex;flex-direction:column;gap:18px}
+.fc{width:100%;border-collapse:collapse;font-size:.95rem}
+.fc th{font-weight:600;color:var(--muted);text-align:left;padding:0 0 6px;font-size:.8rem}
+.fc td{padding:9px 0;border-top:1px solid var(--line);vertical-align:top}
+.fc .rg{display:block;font-size:.78rem;color:var(--muted)}
+.sig{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.sig div{background:var(--sky);border-radius:12px;padding:10px 6px;text-align:center}
+.sig small{display:block;color:var(--muted);font-size:.72rem}.sig b{font-size:1rem}
+.verdict{margin:14px 0 0;font-weight:600}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:0}
+.stats dt{font-size:.78rem;color:var(--muted)}.stats dd{margin:0;font-weight:600}
+
+/* thị trường */
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:18px}
+@media(min-width:900px){.cols{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.row:first-of-type{border-top:0}
+.row img{width:24px;height:24px;border-radius:50%}
+.row .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.row .n small{color:var(--muted);font-weight:400;margin-left:6px}
+.row .v{text-align:right;font-size:.9rem}
+.tbl{overflow-x:auto}
+.tbl table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:640px}
+.tbl th{font-weight:600;color:var(--muted);font-size:.78rem;text-align:right;padding:0 8px 8px}
+.tbl td{padding:9px 8px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.tbl th:nth-child(2),.tbl td:nth-child(2){text-align:left}
+.tbl tr[data-id]{cursor:pointer}.tbl tr[data-id]:hover td{background:rgba(255,255,255,.05)}
+.cn{display:flex;align-items:center;gap:10px;font-weight:600}.cn img{width:24px;height:24px;border-radius:50%}.cn small{color:var(--muted);font-weight:400}
+.note{margin:22px 0 0;font-size:.8rem;color:var(--muted);max-width:75ch}
+.err{background:#5A1C1C;color:#FFD9D6;border-radius:12px;padding:10px 14px;margin:0 0 16px;display:none}
+.err button{border:0;background:var(--gold);color:#2A1D00;border-radius:8px;padding:3px 10px;margin-left:8px;font-weight:600}
+@media(max-width:600px){#chartBox{height:300px}#stage{height:260px}}
+@media(prefers-reduced-motion:reduce){.tilt,.coin{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">🐕 Doge Tracker</div>
+    <div class="stamp" id="stamp">Đang tải…</div>
+  </div>
+  <nav class="coins" id="coins" aria-label="Chọn đồng coin"></nav>
+
+  <header class="hero">
+    <div>
+      <h1 id="name">Dogecoin (DOGE)</h1>
+      <div class="price" id="price" aria-live="polite">–</div>
+      <div class="chips" id="chips"></div>
+      <div class="ctrl"><div class="seg" id="curSeg" role="group" aria-label="Đơn vị tiền">
+        <button data-v="usd" aria-pressed="true">USD</button><button data-v="vnd" aria-pressed="false">VND</button></div></div>
+    </div>
+    <div id="stage" aria-hidden="true"></div>
+  </header>
+
+  <div class="err" id="err" role="alert"><span id="errMsg"></span><button id="retry">Thử lại</button></div>
+
+  <section class="tiles" aria-label="Tổng quan thị trường crypto" id="tiles"></section>
+
+  <main class="grid">
+    <section class="panel" aria-label="Biểu đồ giá">
+      <div class="bar">
+        <h2>Biểu đồ giá và dự báo</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="seg" id="rangeSeg" role="group" aria-label="Khoảng lịch sử">
+            <button data-v="1" aria-pressed="false">24 giờ</button><button data-v="7" aria-pressed="true">7 ngày</button><button data-v="30" aria-pressed="false">30 ngày</button></div>
+          <div class="seg" id="hzSeg" role="group" aria-label="Khoảng dự báo">
+            <button data-v="24" aria-pressed="false">+24 giờ</button><button data-v="72" aria-pressed="true">+3 ngày</button><button data-v="168" aria-pressed="false">+7 ngày</button></div>
+        </div>
+      </div>
+      <div id="chartBox"><canvas id="chart" role="img" aria-label="Biểu đồ giá lịch sử và vùng dự báo"></canvas><div id="tip"></div></div>
+      <div class="legend"><span><i></i>Giá thực tế</span><span><i class="f"></i>Đường dự báo</span><span>Vùng tô màu: khoảng tin cậy 80%</span></div>
+    </section>
+    <aside class="side">
+      <section class="panel tilt" aria-label="Dự báo">
+        <h2>Dự báo thống kê</h2>
+        <table class="fc"><thead><tr><th>Mốc</th><th style="text-align:right">Giá ước tính</th></tr></thead><tbody id="fcBody"></tbody></table>
+        <div class="sig">
+          <div><small>RSI (14)</small><b id="rsi">–</b></div>
+          <div><small>EMA 12/26</small><b id="ema">–</b></div>
+          <div><small>Xu hướng 3 ngày</small><b id="trend">–</b></div>
+        </div>
+        <p class="verdict" id="verdict"></p>
+      </section>
+      <section class="panel tilt" aria-label="Thông tin coin"><h2>Thông tin coin</h2><dl class="stats" id="stats"></dl></section>
+    </aside>
+  </main>
+
+  <section class="panel" aria-label="Top 10 theo vốn hóa" style="margin-bottom:18px">
+    <h2>Top 10 theo vốn hóa <small style="color:var(--muted);font-weight:400">(bấm vào hàng để xem biểu đồ)</small></h2>
+    <div class="tbl"><table><thead><tr><th>#</th><th>Coin</th><th>Giá</th><th>1 giờ</th><th>24 giờ</th><th>7 ngày</th><th>Vốn hóa</th><th>7 ngày qua</th></tr></thead><tbody id="top10"></tbody></table></div>
+  </section>
+
+  <section class="cols">
+    <div class="panel tilt"><h2>Tăng mạnh nhất 24 giờ</h2><div id="gain"></div></div>
+    <div class="panel tilt"><h2>Giảm mạnh nhất 24 giờ</h2><div id="lose"></div></div>
+    <div class="panel tilt"><h2>Đang được tìm kiếm nhiều</h2><div id="trending"></div></div>
+  </section>
+
+  <p class="note">Dự báo được tính ngay trên trình duyệt từ giá 30 ngày gần nhất (hồi quy tuyến tính trên log-giá, giảm một nửa độ dốc, cùng độ biến động lịch sử). Đây là ước tính thống kê đơn giản, không phải lời khuyên đầu tư; giá crypto biến động mạnh và có thể lệch xa dự báo. Dữ liệu: CoinGecko, Alternative.me (chỉ số Sợ hãi &amp; Tham lam). Bảng xếp hạng top 100 dùng để lọc tăng/giảm mạnh nhất.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const API = "https://api.coingecko.com/api/v3";
+const CHIPS = ["dogecoin","bitcoin","ethereum","shiba-inu","solana"];
+const FNG_VI = {"Extreme Fear":"Sợ hãi cực độ","Fear":"Sợ hãi","Neutral":"Trung lập","Greed":"Tham lam","Extreme Greed":"Tham lam cực độ"};
+const st = {coin:"dogecoin", cur:"usd", range:7, hz:72, market:{}, list:[], series:{}, fc:null, pts:[], glob:null, fng:null, trend:null, extraT:0};
+const $ = s => document.querySelector(s);
+const HR = 36e5;
+
+/* ---------- tiện ích ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf = (cur, v) => {
+  const d = cur === "vnd" ? (v < 100 ? 2 : 0) : (v >= 100 ? 2 : v >= 1 ? 3 : v >= .01 ? 5 : 8);
+  return new Intl.NumberFormat(cur === "vnd" ? "vi-VN" : "en-US", {style:"currency", currency:cur.toUpperCase(), minimumFractionDigits:cur === "vnd" ? 0 : Math.min(d, 2), maximumFractionDigits:d}).format(v);
+};
+const money = v => v == null ? "–" : nf(st.cur, v);
+const compact = v => v == null ? "–" : new Intl.NumberFormat(st.cur === "vnd" ? "vi-VN" : "en-US", {style:"currency", currency:st.cur.toUpperCase(), notation:"compact", maximumFractionDigits:2}).format(v);
+const pct = v => v == null ? "–" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+const cls = v => (v || 0) >= 0 ? "up" : "down";
+const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+const hhmm = t => new Date(t).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit"});
+const ddmm = t => new Date(t).toLocaleDateString("vi-VN", {day:"2-digit", month:"2-digit"});
+const curMeta = () => { const m = st.market[st.coin]; return m ? {n:m.name, s:m.symbol.toUpperCase()} : {n:st.coin, s:st.coin.toUpperCase()}; };
+
+async function getJSON(url, quiet){
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error(r.status === 429 ? "CoinGecko giới hạn số lần gọi. Hãy đợi một phút rồi thử lại." : "Lỗi máy chủ (" + r.status + ")");
+    const j = await r.json();
+    try{ localStorage.setItem("dt:" + url, JSON.stringify({t:Date.now(), j})); }catch(e){}
+    return j;
+  }catch(e){
+    let c = null;
+    try{ c = JSON.parse(localStorage.getItem("dt:" + url)); }catch(_){}
+    if(c){ if(!quiet) showErr("Đang hiển thị dữ liệu đã lưu lúc " + hhmm(c.t) + ". " + e.message); return c.j; }
+    throw e;
+  }
+}
+const showErr = m => { $("#errMsg").textContent = m; $("#err").style.display = "block"; };
+const clearErr = () => $("#err").style.display = "none";
+
+/* ---------- tải dữ liệu ---------- */
+async function loadMarket(){
+  const j = await getJSON(`${API}/coins/markets?vs_currency=${st.cur}&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=1h,24h,7d`);
+  st.list = j; st.market = {}; j.forEach(c => st.market[c.id] = c);
+}
+async function loadSeries(force){
+  const k = st.coin + st.cur, c = st.series[k];
+  if(!force && c && Date.now() - c.t < 300000) return;
+  const j = await getJSON(`${API}/coins/${st.coin}/market_chart?vs_currency=${st.cur}&days=30`);
+  st.series[k] = {t:Date.now(), p:j.prices};
+}
+async function loadExtras(force){
+  if(!force && Date.now() - st.extraT < 300000) return;
+  st.extraT = Date.now();
+  const [g, f, t] = await Promise.allSettled([
+    getJSON(`${API}/global`, true), getJSON("https://api.alternative.me/fng/?limit=1", true), getJSON(`${API}/search/trending`, true)]);
+  if(g.status === "fulfilled") st.glob = g.value.data;
+  if(f.status === "fulfilled") st.fng = f.value.data && f.value.data[0];
+  if(t.status === "fulfilled") st.trend = t.value.coins;
+}
+async function refresh(force){
+  try{
+    clearErr();
+    await Promise.all([loadMarket(), loadSeries(force), loadExtras(force)]);
+    $("#stamp").textContent = "Cập nhật lúc " + new Date().toLocaleTimeString("vi-VN") + " · tự làm mới mỗi 60 giây";
+    flip();
+  }catch(e){ showErr(e.message || "Không tải được dữ liệu."); }
+  render();
+}
+
+/* ---------- phân tích và dự báo ---------- */
+function ema(a, n){ const k = 2 / (n + 1); return a.reduce((e, v, i) => i ? v * k + e * (1 - k) : v, a[0]); }
+function rsi(a, n = 14){
+  const s = a.slice(-(n + 1)); let g = 0, l = 0;
+  for(let i = 1; i < s.length; i++){ const d = s[i] - s[i - 1]; d >= 0 ? g += d : l -= d; }
+  return l === 0 ? 100 : 100 - 100 / (1 + g / l);
+}
+function analyze(pts){
+  const [t0, P0] = pts[pts.length - 1];
+  const win = pts.filter(p => t0 - p[0] <= 72 * HR);
+  const xs = win.map(p => (p[0] - t0) / HR), ys = win.map(p => Math.log(p[1]));
+  const mx = avg(xs), my = avg(ys);
+  let sxy = 0, sxx = 0;
+  xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) ** 2; });
+  const slope = sxx ? sxy / sxx : 0;
+  const rec = pts.filter(p => t0 - p[0] <= 168 * HR);
+  let acc = 0, c = 0;
+  for(let i = 1; i < rec.length; i++){
+    const dt = (rec[i][0] - rec[i - 1][0]) / HR;
+    if(dt > .2){ const r = Math.log(rec[i][1] / rec[i - 1][1]); acc += r * r / dt; c++; }
+  }
+  const sig = c ? Math.sqrt(acc / c) : 0;
+  const at = h => { const mid = P0 * Math.exp(slope * .5 * h), w = 1.2816 * sig * Math.sqrt(h); return {t:t0 + h * HR, mid, lo:mid * Math.exp(-w), hi:mid * Math.exp(w)}; };
+  const closes = rec.map(p => p[1]);
+  return {t0, P0, slope, sig, at, rsi:rsi(closes), e12:ema(closes.slice(-60), 12), e26:ema(closes.slice(-60), 26)};
+}
+
+/* ---------- hiển thị ---------- */
+function spark(a, up){
+  if(!a || a.length < 2) return "";
+  const s = a.filter((_, i) => i % 4 === 0), mn = Math.min(...s), mx = Math.max(...s);
+  const pts = s.map((v, i) => `${(i / (s.length - 1) * 80).toFixed(1)},${(22 - (v - mn) / (mx - mn || 1) * 20).toFixed(1)}`).join(" ");
+  return `<svg width="80" height="24" viewBox="0 0 80 24" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${up ? "#4EE0A0" : "#FF7A7A"}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+}
+const p1 = c => c.price_change_percentage_1h_in_currency, p24 = c => c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h, p7 = c => c.price_change_percentage_7d_in_currency;
+
+function render(){
+  const m = st.market[st.coin], meta = curMeta();
+  $("#name").textContent = `${meta.n} (${meta.s})`;
+  document.title = m ? `${meta.s} ${money(m.current_price)} – Doge Tracker` : "Doge Tracker";
+  setCoinFace(st.coin === "dogecoin" ? "Ð" : meta.s.slice(0, 4));
+
+  $("#coins").innerHTML = CHIPS.map(id => {
+    const x = st.market[id];
+    return `<button class="coin" data-id="${id}" aria-pressed="${id === st.coin}"><b>${id === "shiba-inu" ? "SHIB" : id === "dogecoin" ? "DOGE" : x ? x.symbol.toUpperCase() : id}</b>` +
+      (x ? `<span>${money(x.current_price)}</span><small class="${cls(p24(x))}">${pct(p24(x))}</small>` : "") + `</button>`;
+  }).join("");
+
+  if(m){
+    $("#price").textContent = money(m.current_price);
+    $("#chips").innerHTML = [["1 giờ", p1(m)], ["24 giờ", p24(m)], ["7 ngày", p7(m)]].map(([l, v]) => `<div class="chip"><span>${l}</span><b class="${cls(v)}">${pct(v)}</b></div>`).join("");
+    $("#stats").innerHTML = [["Cao nhất 24 giờ", money(m.high_24h)], ["Thấp nhất 24 giờ", money(m.low_24h)], ["Khối lượng 24 giờ", compact(m.total_volume)], ["Vốn hóa", compact(m.market_cap)], ["Hạng vốn hóa", "#" + m.market_cap_rank], ["Đỉnh mọi thời đại", money(m.ath)]]
+      .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  }
+  renderTiles(); renderLists();
+  const ser = st.series[st.coin + st.cur];
+  if(ser && ser.p.length > 30){
+    const pts = ser.p.slice(); if(m) pts.push([Date.now(), m.current_price]);
+    st.pts = pts; st.fc = analyze(pts); renderForecast();
+  }
+  drawChart();
+}
+function renderTiles(){
+  const g = st.glob, f = st.fng, c = st.cur, t = [];
+  if(g){
+    const ch = g.market_cap_change_percentage_24h_usd;
+    t.push(`<div class="tile tilt"><small>Tổng vốn hóa thị trường</small><b>${compact(g.total_market_cap[c])}</b><em class="${cls(ch)}">${pct(ch)} / 24 giờ</em></div>`);
+    t.push(`<div class="tile tilt"><small>Khối lượng 24 giờ</small><b>${compact(g.total_volume[c])}</b><em style="color:var(--muted)">${g.active_cryptocurrencies.toLocaleString("vi-VN")} coin</em></div>`);
+    t.push(`<div class="tile tilt"><small>Thống trị của BTC</small><b>${g.market_cap_percentage.btc.toFixed(1)}%</b><em style="color:var(--muted)">ETH ${g.market_cap_percentage.eth.toFixed(1)}%</em></div>`);
+  }
+  if(f){
+    const v = +f.value, ang = v / 100 * 180 - 90;
+    t.push(`<div class="tile tilt"><small>Sợ hãi &amp; Tham lam</small><svg class="g" viewBox="0 0 140 80" aria-hidden="true"><defs><linearGradient id="gg"><stop offset="0" stop-color="#FF7A7A"/><stop offset=".5" stop-color="#FFD166"/><stop offset="1" stop-color="#4EE0A0"/></linearGradient></defs><path d="M12 72A58 58 0 0 1 128 72" fill="none" stroke="url(#gg)" stroke-width="12" stroke-linecap="round"/><line x1="70" y1="72" x2="70" y2="26" stroke="#fff" stroke-width="3" stroke-linecap="round" transform="rotate(${ang} 70 72)"/><circle cx="70" cy="72" r="5" fill="#fff"/></svg><b>${v} <em style="color:var(--muted)">${FNG_VI[f.value_classification] || esc(f.value_classification)}</em></b></div>`);
+  }
+  const dg = st.market.dogecoin;
+  if(dg && g) t.push(`<div class="tile tilt"><small>Vốn hóa DOGE</small><b>${compact(dg.market_cap)}</b><em style="color:var(--muted)">${(dg.market_cap / g.total_market_cap[c] * 100).toFixed(2)}% thị trường</em></div>`);
+  $("#tiles").innerHTML = t.join("");
+}
+function rows(items){
+  return items.map(c => `<button class="row" data-id="${esc(c.id)}"><img src="${esc(c.image)}" alt="" loading="lazy"><span class="n">${esc(c.symbol.toUpperCase())}<small>${esc(c.name)}</small></span><span class="v">${money(c.current_price)}<br><b class="${cls(p24(c))}">${pct(p24(c))}</b></span></button>`).join("");
+}
+function renderLists(){
+  const L = st.list; if(!L.length) return;
+  $("#top10").innerHTML = L.slice(0, 10).map(c => `<tr data-id="${esc(c.id)}"><td>${c.market_cap_rank}</td><td><div class="cn"><img src="${esc(c.image)}" alt="" loading="lazy">${esc(c.name)} <small>${esc(c.symbol.toUpperCase())}</small></div></td><td>${money(c.current_price)}</td><td class="${cls(p1(c))}">${pct(p1(c))}</td><td class="${cls(p24(c))}">${pct(p24(c))}</td><td class="${cls(p7(c))}">${pct(p7(c))}</td><td>${compact(c.market_cap)}</td><td>${spark(c.sparkline_in_7d && c.sparkline_in_7d.price, (p7(c) || 0) >= 0)}</td></tr>`).join("");
+  const s = L.filter(c => p24(c) != null).sort((a, b) => p24(b) - p24(a));
+  $("#gain").innerHTML = rows(s.slice(0, 5)); $("#lose").innerHTML = rows(s.slice(-5).reverse());
+  $("#trending").innerHTML = st.trend ? st.trend.slice(0, 6).map(({item:i}) => `<button class="row" data-id="${esc(i.id)}"><img src="${esc(i.thumb)}" alt="" loading="lazy"><span class="n">${esc(i.symbol)}<small>${esc(i.name)}</small></span><span class="v" style="color:var(--muted)">${i.market_cap_rank ? "#" + i.market_cap_rank : "–"}</span></button>`).join("") : '<span style="color:var(--muted)">Chưa có dữ liệu.</span>';
+}
+function renderForecast(){
+  const a = st.fc;
+  $("#fcBody").innerHTML = [[24, "Sau 24 giờ"], [72, "Sau 3 ngày"], [168, "Sau 7 ngày"]].map(([h, l]) => {
+    const f = a.at(h), ch = (f.mid / a.P0 - 1) * 100;
+    return `<tr><td>${l}</td><td style="text-align:right"><b>${money(f.mid)}</b> <b class="${cls(ch)}">${pct(ch)}</b><span class="rg">${money(f.lo)} – ${money(f.hi)}</span></td></tr>`;
+  }).join("");
+  const r = a.rsi, crossUp = a.e12 > a.e26, tr = a.slope * 72 * 100;
+  $("#rsi").textContent = r.toFixed(0) + (r > 70 ? " · cao" : r < 30 ? " · thấp" : "");
+  $("#ema").innerHTML = crossUp ? '<span class="up">Tăng</span>' : '<span class="down">Giảm</span>';
+  $("#trend").innerHTML = `<span class="${cls(tr)}">${pct(tr)}</span>`;
+  const score = (crossUp ? 1 : -1) + (a.slope > 0 ? 1 : -1) + (r < 30 ? 1 : r > 70 ? -1 : 0);
+  $("#verdict").textContent = score >= 2 ? "Các chỉ báo đang nghiêng về xu hướng tăng." : score <= -2 ? "Các chỉ báo đang nghiêng về xu hướng giảm." : "Các chỉ báo trái chiều: thị trường chưa có xu hướng rõ.";
+}
+
+/* ---------- biểu đồ canvas ---------- */
+let geo = null;
+function drawChart(){
+  const cv = $("#chart"), box = $("#chartBox"), W = box.clientWidth, H = box.clientHeight, dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  g.font = '12px "Bricolage Grotesque", system-ui, sans-serif';
+  const MUTED = "#9FB0D6", LINE = "rgba(255,255,255,.1)", GOLD = "#F5C84B", FC = "#7FD6FF";
+  if(!st.fc){ g.fillStyle = MUTED; g.fillText("Đang tải dữ liệu…", 10, 24); geo = null; return; }
+  const a = st.fc, t0 = a.t0, tMin = t0 - st.range * 24 * HR;
+  const view = st.pts.filter(p => p[0] >= tMin);
+  const fc = Array.from({length:25}, (_, k) => a.at(st.hz * k / 24)), tMax = t0 + st.hz * HR;
+  let yMin = Math.min(...view.map(p => p[1]), ...fc.map(f => f.lo)), yMax = Math.max(...view.map(p => p[1]), ...fc.map(f => f.hi));
+  const pad = (yMax - yMin) * .08; yMin -= pad; yMax += pad;
+  const L = 8, R = 82, T = 10, B = 24, cw = W - L - R, ch = H - T - B;
+  const X = t => L + (t - tMin) / (tMax - tMin) * cw, Y = v => T + (1 - (v - yMin) / (yMax - yMin)) * ch;
+  geo = {X, Y, L, R, T, B, W, H, tMin, tMax, view, fc, t0};
+  g.strokeStyle = LINE; g.fillStyle = MUTED; g.lineWidth = 1; g.textAlign = "left";
+  for(let i = 0; i <= 4; i++){ const v = yMin + (yMax - yMin) * i / 4, y = Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke(); g.fillText(money(v), W - R + 6, y + 4); }
+  g.textAlign = "center";
+  for(let i = 0; i <= 4; i++){ const t = tMin + (tMax - tMin) * i / 4; g.fillText(st.range === 1 && st.hz <= 24 ? hhmm(t) : ddmm(t), Math.min(Math.max(X(t), L + 16), W - R - 16), H - 6); }
+  // vùng dự báo
+  const gr = g.createLinearGradient(0, T, 0, T + ch); gr.addColorStop(0, "rgba(127,214,255,.32)"); gr.addColorStop(1, "rgba(127,214,255,.08)");
+  g.fillStyle = gr; g.beginPath();
+  fc.forEach((f, i) => i ? g.lineTo(X(f.t), Y(f.hi)) : g.moveTo(X(f.t), Y(f.hi)));
+  for(let i = fc.length - 1; i >= 0; i--) g.lineTo(X(fc[i].t), Y(fc[i].lo));
+  g.closePath(); g.fill();
+  g.strokeStyle = MUTED; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(X(t0), T); g.lineTo(X(t0), T + ch); g.stroke();
+  g.fillStyle = MUTED; g.textAlign = "right"; g.fillText("Bây giờ", X(t0) - 6, T + 12);
+  g.strokeStyle = FC; g.lineWidth = 2.5; g.setLineDash([7, 6]); g.beginPath();
+  fc.forEach((f, i) => i ? g.lineTo(X(f.t), Y(f.mid)) : g.moveTo(X(f.t), Y(f.mid))); g.stroke();
+  // giá thực: vùng dưới đường + đường phát sáng
+  g.setLineDash([]); g.lineJoin = "round";
+  const ga = g.createLinearGradient(0, T, 0, T + ch); ga.addColorStop(0, "rgba(245,200,75,.30)"); ga.addColorStop(1, "rgba(245,200,75,0)");
+  g.fillStyle = ga; g.beginPath(); g.moveTo(X(view[0][0]), T + ch);
+  view.forEach(p => g.lineTo(X(p[0]), Y(p[1]))); g.lineTo(X(t0), T + ch); g.closePath(); g.fill();
+  g.shadowColor = "rgba(245,200,75,.7)"; g.shadowBlur = 10; g.strokeStyle = GOLD; g.lineWidth = 2.2; g.beginPath();
+  view.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.stroke();
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(X(t0), Y(a.P0), 4.5, 0, 7); g.fill(); g.shadowBlur = 0;
+}
+$("#chart").addEventListener("mousemove", e => {
+  if(!geo) return;
+  const r = e.target.getBoundingClientRect(), x = e.clientX - r.left;
+  const t = geo.tMin + (x - geo.L) / (geo.W - geo.L - geo.R) * (geo.tMax - geo.tMin), tip = $("#tip");
+  if(t < geo.tMin || t > geo.tMax){ tip.style.display = "none"; return; }
+  let html, px, py;
+  if(t <= geo.t0){
+    const p = geo.view.reduce((b, c) => Math.abs(c[0] - t) < Math.abs(b[0] - t) ? c : b);
+    html = `${ddmm(p[0])} ${hhmm(p[0])}<br><b>${money(p[1])}</b>`; px = geo.X(p[0]); py = geo.Y(p[1]);
+  } else {
+    const f = geo.fc.reduce((b, c) => Math.abs(c.t - t) < Math.abs(b.t - t) ? c : b);
+    html = `Dự báo ${ddmm(f.t)} ${hhmm(f.t)}<br><b>${money(f.mid)}</b><br>${money(f.lo)} – ${money(f.hi)}`; px = geo.X(f.t); py = geo.Y(f.mid);
+  }
+  tip.innerHTML = html; tip.style.display = "block";
+  tip.style.left = Math.min(px + 12, geo.W - tip.offsetWidth - 4) + "px";
+  tip.style.top = Math.max(py - tip.offsetHeight - 10, 0) + "px";
+});
+$("#chart").addEventListener("mouseleave", () => $("#tip").style.display = "none");
+
+/* ---------- đồng xu 3D (three.js) ---------- */
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let coin3d = null, boost = 0, tilt = {x:0, y:0};
+function makeTex(txt){
+  const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(200, 180, 30, 256, 256, 280); gr.addColorStop(0, "#FFF0B5"); gr.addColorStop(.55, "#F5C84B"); gr.addColorStop(1, "#B8841A");
+  g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = "rgba(120,80,0,.55)"; g.lineWidth = 14; g.beginPath(); g.arc(256, 256, 232, 0, 7); g.stroke();
+  g.lineWidth = 4; g.setLineDash([3, 14]); g.beginPath(); g.arc(256, 256, 206, 0, 7); g.stroke(); g.setLineDash([]);
+  g.fillStyle = "#8A5E0A"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = `800 ${txt.length > 1 ? 150 : 330}px "Bricolage Grotesque", Arial, sans-serif`;
+  g.shadowColor = "rgba(255,245,200,.9)"; g.shadowOffsetY = 5; g.fillText(txt, 256, 268);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+let faceTxt = "";
+function setCoinFace(txt){
+  if(!coin3d || txt === faceTxt) return;
+  faceTxt = txt; const t = makeTex(txt);
+  coin3d.faces.forEach(m => { m.map = t; m.needsUpdate = true; });
+}
+function init3D(){
+  const el = $("#stage");
+  if(!window.THREE){ el.style.display = "none"; return; }
+  try{
+    const R = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    R.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); el.appendChild(R.domElement);
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 1, .1,50); cam.position.set(0, 0, 6.2);
+    scene.add(new THREE.AmbientLight(0xffffff, .65));
+    const key = new THREE.DirectionalLight(0xfff0c8, 1.15); key.position.set(3, 4, 5); scene.add(key);
+    const rimL = new THREE.PointLight(0x7fd6ff, 1.4, 25); rimL.position.set(-4, -1, 3); scene.add(rimL);
+    const gold = new THREE.MeshStandardMaterial({color:0xE0A82A, metalness:.75, roughness:.32});
+    const f1 = new THREE.MeshStandardMaterial({map:makeTex("Ð"), metalness:.4, roughness:.4}), f2 = f1.clone();
+    const grp = new THREE.Group();
+    grp.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, .24, 96), gold));
+    grp.children[0].rotation.x = Math.PI / 2;
+    const front = new THREE.Mesh(new THREE.CircleGeometry(1.42, 96), f1); front.position.z = .125; grp.add(front);
+    const back = new THREE.Mesh(new THREE.CircleGeometry(1.42, 96), f2); back.position.z = -.125; back.rotation.y = Math.PI; grp.add(back);
+    [.115, -.115].forEach(z => { const r = new THREE.Mesh(new THREE.TorusGeometry(1.46, .07, 20, 96), gold); r.position.z = z; grp.add(r); });
+    grp.rotation.set(.18, calm ? .5 : 0, -.08); scene.add(grp);
+    coin3d = {faces:[f1, f2]}; faceTxt = "Ð";
+    const size = () => { const w = el.clientWidth, h = el.clientHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+    size(); new ResizeObserver(size).observe(el);
+    addEventListener("pointermove", e => { tilt.x = (e.clientY / innerHeight - .5) * .5; tilt.y = (e.clientX / innerWidth - .5) * .9; });
+    const t0 = performance.now();
+    (function loop(now){
+      requestAnimationFrame(loop);
+      const t = (now - t0) / 1000;
+      if(!calm){ grp.rotation.y += .007 + boost; boost *= .95; grp.rotation.x += (.18 + tilt.x - grp.rotation.x) * .06; grp.position.y = Math.sin(t * 1.4) * .08; }
+      R.render(scene, cam);
+    })(t0);
+  }catch(e){ el.style.display = "none"; }
+}
+function flip(){ if(!calm) boost = .22; }
+
+/* ---------- nghiêng 3D cho thẻ ---------- */
+if(!calm && matchMedia("(pointer: fine)").matches){
+  document.addEventListener("pointermove", e => {
+    const el = e.target.closest && e.target.closest(".tilt"); if(!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--ry", ((e.clientX - r.left) / r.width - .5) * 8 + "deg");
+    el.style.setProperty("--rx", -((e.clientY - r.top) / r.height - .5) * 8 + "deg");
+  });
+  document.addEventListener("pointerout", e => {
+    const el = e.target.closest && e.target.closest(".tilt");
+    if(el && !el.contains(e.relatedTarget)){ el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); }
+  });
+}
+
+/* ---------- điều khiển ---------- */
+function seg(id, key, cb){
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    st[key] = isNaN(b.dataset.v) ? b.dataset.v : +b.dataset.v;
+    $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    cb();
+  });
+}
+function pick(id){ st.coin = id; st.fc = null; render(); refresh(false); scrollTo({top:0, behavior:calm ? "auto" : "smooth"}); }
+seg("#rangeSeg", "range", drawChart);
+seg("#hzSeg", "hz", drawChart);
+seg("#curSeg", "cur", () => { st.market = {}; st.list = []; st.fc = null; st.extraT = 0; render(); refresh(true); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-id]"); if(b && st.market[b.dataset.id]) pick(b.dataset.id); });
+$("#retry").addEventListener("click", () => refresh(true));
+addEventListener("resize", drawChart);
+init3D(); refresh(true);
+setInterval(() => refresh(false), 60000);
+</script>
+</body>
+</html>
